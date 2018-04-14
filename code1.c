@@ -4,8 +4,6 @@
 #include<stdbool.h>
 #include<stdlib.h>
 
-int i,j,k;  //Global variable for loops
-
 int processes,resource;
  
 int safe[10]; //To store the safe sequence
@@ -18,6 +16,7 @@ int max[10][10];  //Max matrix to check total number of resources required to a 
 //Mutex lock for avail and allocation
 pthread_mutex_t mut_available;
 pthread_mutex_t mut_allocation;
+pthread_mutex_t mut_need;
 pthread_mutex_t lock;
 
 bool fun_allocation(int process,int *request);
@@ -28,28 +27,28 @@ void print()
 {
 	//display status of available.
 	printf("Status of avail:\n");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		printf("\tR%d",i);
 	}
 	printf("\n");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		printf("\t%d",avail[i]);
 	}
 	
 	//display status of allocation
 	printf("\nStatus of allocation:\n");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		printf("\tR%d",i);
 	}
 	printf("\n");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		
 		printf("P%d\t",i);
-		for(j=0;j<resource;j++)
+		for(int j=0;j<resource;j++)
 		{
 			printf("%d\t",alloc[i][j]);
 		}
@@ -59,16 +58,16 @@ void print()
 	
 	//display status of max.
 	printf("Status of max:\n");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		printf("\tR%d",i);
 	}
 	printf("\n");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		
 		printf("P%d\t",i);
-		for(j=0;j<resource;j++)
+		for(int j=0;j<resource;j++)
 		{
 			printf("%d\t",max[i][j]);
 		}
@@ -78,15 +77,36 @@ void print()
 	
 	//display status of need.
 	printf("Status of need:\n");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		printf("\tR%d",i);
 	}
 	printf("\n");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		printf("P%d\t",i);
-		for(j=0;j<resource;j++)
+		for(int j=0;j<resource;j++)
+		{
+			printf("%d\t",need[i][j]);
+		}
+		printf("\n");
+		
+	}
+}
+
+//Method for  update the value of need.
+void update_need()
+{
+	printf("Status of need:\n");
+	for(int i=0;i<resource;i++)
+	{
+		printf("\tR%d",i);
+	}
+	printf("\n");
+	for(int i=0;i<processes;i++)
+	{
+		printf("P%d\t",i);
+		for(int j=0;j<resource;j++)
 		{
 			need[i][j]=max[i][j]-alloc[i][j];
 			printf("%d\t",need[i][j]);
@@ -96,7 +116,6 @@ void print()
 	}
 }
 
-
 /**
  Method for Bankers algorithm which check safe and unsafe state.
 It return true if system is in safe state, false if unsafe state.
@@ -104,23 +123,25 @@ It return true if system is in safe state, false if unsafe state.
 
 bool Bankers()
 {
-	int task[resource];  //A duplicate array for avail.
-	for(i=0;i<resource;i++)
+	int task[10];  //A duplicate array for avail.
+	for(int i=0;i<processes;i++)
 	{
 		completed[i]=false;
 	}
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		task[i]=avail[i];
 	}
 	int count1=0;
+	print();
 	while(count1<processes)
 	{
-		bool found=false;
-		for(i=0;i<processes;i++)
+		bool check=false;
+		for(int i=0;i<processes;i++)
 		{
 			if(completed[i]==false)
 			{
+				int j;
 				for(j=0;j<resource;j++)
 				{
 					if(need[i][j]>task[j])
@@ -130,19 +151,19 @@ bool Bankers()
 				}
 				if(j==resource)
 				{
-					for(k=0;k<resource;k++)
+					for(int k=0;k<resource;k++)
 					{			
-						task[k]=task[k]+alloc[i][k];
+						task[k]+=alloc[i][k];
 						
 					}
 					safe[count1++]=i;
 					completed[i]=true;
-					found=true;
+					check=true;
 				}	
 			}
 			
 		}	
-		if(found==false)
+		if(check==false)
 		{
 			printf("System is in unsafe state\n");
 			return false;
@@ -150,7 +171,7 @@ bool Bankers()
 	}
 	printf("Your system is in safe state and safe sequence is\n");
 	printf("<");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		printf("P%d ",safe[i]);
 	}
@@ -161,55 +182,77 @@ bool Bankers()
 
 
 //Method for requesting the resources.
-void *request_resource(void* p)
+void *request_resource()
 {
 	pthread_mutex_lock(&lock);
-	int process_id=(int)p;
-	sleep(1);    	
-	int request[resource];
-	for(i=0;i<resource;i++)
+	int process_id;
+	printf("Enter process id which  requesting for resource: ");
+	scanf("%d",&process_id);    	
+	int request[10];
+	printf("Process P%d requesting for resource: \n",process_id);
+	for(int i=0;i<resource;i++)
 	{	
 		printf("Enter number of instance required for resource R%d: ",i);
 		scanf("%d",&request[i]);
-	}
-		
+	}	
 	if(fun_allocation(process_id,request)==true)
 	{
-		printf(" Approved\n");
+		printf(" Reuest Approved\n");
+		print();
 		sleep(1);
 	}
 	else
 	{
-		printf(" Denied\n");
+		printf(" Request Denied\n");
+		print();
 		sleep(1);
 	}
 	pthread_mutex_unlock(&lock);
 	pthread_exit(NULL);
 }
 
-bool fun_allocation(int process,int request[resource])
+
+bool fun_allocation(int process,int *request)
 {
-	for(i=0;i<resource;i++)
+	for(int r=0;r<resource;r++)
 	{
+		if((request[r]<=need[process][r]) && (request[r]<=avail[r]))
+		{
 		pthread_mutex_lock(&mut_allocation);
-		alloc[process][i]=alloc[process][i]+request[i];
+		alloc[process][r]=alloc[process][r]+request[r];
 		pthread_mutex_unlock(&mut_allocation);
 
 		pthread_mutex_lock(&mut_available);
-		avail[i]=avail[i]-request[i];
+		avail[r]=avail[r]-request[r];
 		pthread_mutex_unlock(&mut_available);
+
+		pthread_mutex_lock(&mut_need);
+		need[process][r]=need[process][r]-request[r];
+		pthread_mutex_unlock(&mut_need);
+		}
+		else
+		{
+			return false;
+		}
 	}
+	printf("You are in Fun allocation method\n");
+	print();
 	if(Bankers()==false)
 	{
-		for(i=0;i<resource;i++)
+		printf("\nYou are inside bankers algorithm\n");
+		for(int r=0;r<resource;r++)
 		{
 			pthread_mutex_lock(&mut_allocation);
-			alloc[process][i]=alloc[process][i]-request[i];
+			alloc[process][r]=alloc[process][r]-request[r];
 			pthread_mutex_unlock(&mut_allocation);
 
 			pthread_mutex_lock(&mut_available);
-			avail[i]=avail[i]+request[i];
+			avail[r]=avail[r]+request[r];
 			pthread_mutex_unlock(&mut_available);
+
+			pthread_mutex_lock(&mut_need);
+			need[process][r]=need[process][r]+request[r];
+			pthread_mutex_unlock(&mut_need);
 		}		
 		return false;
 	}
@@ -220,44 +263,49 @@ int main()
 {
 	pthread_mutex_init(&mut_available,NULL);
 	pthread_mutex_init(&mut_allocation,NULL);
+	pthread_mutex_init(&mut_need,NULL);
 	pthread_mutex_init(&lock,NULL);
 	printf("\nEnter number of processes: ");
 	scanf("%d",&processes);
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		completed[i]=false;
 	}
 	printf("\nEnter number of resources: ");
 	scanf("%d",&resource);
 	printf("\nEnter max matrix: ");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
-		for(j=0;j<resource;j++)
+		for(int j=0;j<resource;j++)
 		{
 			scanf("%d",&max[i][j]);
 		}
 	}
 	printf("\nEnter allocation matrix: ");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
-		for(j=0;j<resource;j++)
+		for(int j=0;j<resource;j++)
 		{
 			scanf("%d",&alloc[i][j]);
 		}
 	}
 	printf("\nEnter available resource: ");
-	for(i=0;i<resource;i++)
+	for(int i=0;i<resource;i++)
 	{
 		scanf("%d",&avail[i]);
 	}
-	printf("\nBefore allocation of resources value of need, max, allocate and available:\n");
+	printf("\nvalue of need, max, allocate and available:\n");
 	print();
+	printf("\nvalue of updated need:\n");
+	update_need();
 	Bankers();
+	printf("\nvalue of need, max, allocate and available:\n");
+	print();
 	pthread_t Threads[processes];
 	int res;
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
-		res=pthread_create(&Threads[i],NULL,request_resource,(void *)i);
+		res=pthread_create(&Threads[i],NULL,request_resource,NULL);
 	}
 	if(res!=0)
 	{
@@ -265,7 +313,7 @@ int main()
 		exit(-1);
 	}
 	printf("Thread created successfully.\n");
-	for(i=0;i<processes;i++)
+	for(int i=0;i<processes;i++)
 	{
 		pthread_join(Threads[i],NULL);
 	}
